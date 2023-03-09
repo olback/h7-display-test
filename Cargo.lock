@@ -70,6 +70,7 @@ version = "0.1.0"
 dependencies = [
  "embedded-graphics",
  "embedded-graphics-core",
+ "profont",
  "sdl2",
 ]
 
@@ -98,6 +99,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "578ede34cf02f8924ab9447f50c28075b4d3e5b269972345e7e0372b38c6cdcd"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "profont"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd908932b251e9f146130df7566e8f7c5b0c6ddb29f6d67571f3579f59043c36"
+dependencies = [
+ "embedded-graphics",
 ]
 
 [[package]]

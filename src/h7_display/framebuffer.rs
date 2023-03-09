@@ -2,31 +2,31 @@ use {core::mem::MaybeUninit, embedded_graphics_core::prelude::*};
 
 #[derive(Debug)]
 #[repr(transparent)]
-pub struct FrameBuffer<PIX: PixelColor, const WIDTH: usize, const HEIGHT: usize>
+pub struct FrameBuffer<COLOR: PixelColor, const WIDTH: usize, const HEIGHT: usize>
 where
     [(); WIDTH * HEIGHT]:,
 {
-    buffer: [MaybeUninit<PIX>; WIDTH * HEIGHT],
+    buffer: [MaybeUninit<COLOR>; WIDTH * HEIGHT],
 }
 
-impl<PIX: PixelColor, const WIDTH: usize, const HEIGHT: usize> FrameBuffer<PIX, WIDTH, HEIGHT>
+impl<COLOR: PixelColor, const WIDTH: usize, const HEIGHT: usize> FrameBuffer<COLOR, WIDTH, HEIGHT>
 where
     [(); WIDTH * HEIGHT]:,
 {
-    pub const fn new() -> Self {
-        Self {
-            buffer: MaybeUninit::<PIX>::uninit_array(),
-        }
-    }
+    // pub const fn new() -> Self {
+    //     Self {
+    //         buffer: MaybeUninit::<COLOR>::uninit_array(),
+    //     }
+    // }
 
     #[inline(always)]
-    pub fn at(&self, x: usize, y: usize) -> &PIX {
+    pub fn at(&self, x: usize, y: usize) -> &COLOR {
         let idx = Self::xy_to_index(x, y);
         &self[idx]
     }
 
     #[inline(always)]
-    pub fn at_mut(&mut self, x: usize, y: usize) -> &mut PIX {
+    pub fn at_mut(&mut self, x: usize, y: usize) -> &mut COLOR {
         let idx = Self::xy_to_index(x, y);
         &mut self[idx]
     }
@@ -37,24 +37,24 @@ where
     }
 
     // #[inline(always)]
-    // pub unsafe fn at_unchecked(&self, x: usize, y: usize) -> &PIX {
+    // pub unsafe fn at_unchecked(&self, x: usize, y: usize) -> &COLOR {
     //     let idx = self.xy_to_index(x, y);
     //     self.get_unchecked(idx)
     // }
 
     // #[inline(always)]
-    // pub unsafe fn at_unchecked_mut(&mut self, x: usize, y: usize) -> &mut PIX {
+    // pub unsafe fn at_unchecked_mut(&mut self, x: usize, y: usize) -> &mut COLOR {
     //     let idx = self.xy_to_index(x, y);
     //     self.get_unchecked_mut(idx)
     // }
 }
 
-impl<PIX: PixelColor, const WIDTH: usize, const HEIGHT: usize> core::ops::Deref
-    for FrameBuffer<PIX, WIDTH, HEIGHT>
+impl<COLOR: PixelColor, const WIDTH: usize, const HEIGHT: usize> core::ops::Deref
+    for FrameBuffer<COLOR, WIDTH, HEIGHT>
 where
     [(); WIDTH * HEIGHT]:,
 {
-    type Target = [PIX; WIDTH * HEIGHT];
+    type Target = [COLOR; WIDTH * HEIGHT];
 
     #[inline(always)]
     fn deref(&self) -> &Self::Target {
@@ -62,8 +62,8 @@ where
     }
 }
 
-impl<PIX: PixelColor, const WIDTH: usize, const HEIGHT: usize> core::ops::DerefMut
-    for FrameBuffer<PIX, WIDTH, HEIGHT>
+impl<COLOR: PixelColor, const WIDTH: usize, const HEIGHT: usize> core::ops::DerefMut
+    for FrameBuffer<COLOR, WIDTH, HEIGHT>
 where
     [(); WIDTH * HEIGHT]:,
 {

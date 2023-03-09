@@ -8,4 +8,5 @@ edition = "2021"
 [dependencies]
 embedded-graphics = "0.7.1"
 embedded-graphics-core = "0.3.3"
+profont = "0.6"
 sdl2 = "0.35.2"

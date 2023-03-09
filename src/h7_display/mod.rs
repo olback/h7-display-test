@@ -1,60 +1,89 @@
+use std::ops::Range;
+
 use embedded_graphics_core::prelude::*;
 pub use framebuffer::FrameBuffer;
 
 mod framebuffer;
 
 #[derive(Debug)]
-pub struct H7Display<PIX: PixelColor, const WIDTH: usize, const HEIGHT: usize>
+pub struct H7Display<'b, COLOR: PixelColor, const WIDTH: usize, const HEIGHT: usize>
 where
     [(); WIDTH * HEIGHT]:,
 {
     front_buffer_idx: usize,
-    buffers: [FrameBuffer<PIX, WIDTH, HEIGHT>; 2],
+    buffers: [&'b mut FrameBuffer<COLOR, WIDTH, HEIGHT>; 2],
 }
 
-impl<PIX: PixelColor, const WIDTH: usize, const HEIGHT: usize> H7Display<PIX, WIDTH, HEIGHT>
+impl<'b, COLOR: PixelColor, const WIDTH: usize, const HEIGHT: usize>
+    H7Display<'b, COLOR, WIDTH, HEIGHT>
 where
     [(); WIDTH * HEIGHT]:,
 {
-    pub const fn new() -> Self {
+    pub const fn new(
+        front: &'b mut FrameBuffer<COLOR, WIDTH, HEIGHT>,
+        back: &'b mut FrameBuffer<COLOR, WIDTH, HEIGHT>,
+    ) -> Self {
         Self {
-            // mode: DisplayMode::Text,
             front_buffer_idx: 0,
-            buffers: [FrameBuffer::new(), FrameBuffer::new()],
+            buffers: [front, back],
         }
     }
 
     #[inline(always)]
-    pub fn front_buffer(&self) -> &FrameBuffer<PIX, WIDTH, HEIGHT> {
-        &self.buffers[self.front_buffer_idx]
+    pub fn front_buffer(&self) -> &FrameBuffer<COLOR, WIDTH, HEIGHT> {
+        self.buffers[self.front_buffer_idx]
     }
 
     #[inline(always)]
-    pub fn back_buffer(&self) -> &FrameBuffer<PIX, WIDTH, HEIGHT> {
-        &self.buffers[(self.front_buffer_idx + 1) % self.buffers.len()]
+    pub fn back_buffer(&self) -> &FrameBuffer<COLOR, WIDTH, HEIGHT> {
+        self.buffers[(self.front_buffer_idx + 1) % self.buffers.len()]
     }
 
     #[inline(always)]
-    pub fn back_buffer_mut(&mut self) -> &mut FrameBuffer<PIX, WIDTH, HEIGHT> {
+    pub fn back_buffer_mut(&mut self) -> &mut FrameBuffer<COLOR, WIDTH, HEIGHT> {
         unsafe { core::mem::transmute(self.back_buffer()) }
     }
 
     pub fn swap_buffers(
         &mut self,
     ) -> (
-        &FrameBuffer<PIX, WIDTH, HEIGHT>,
-        &mut FrameBuffer<PIX, WIDTH, HEIGHT>,
+        &FrameBuffer<COLOR, WIDTH, HEIGHT>,
+        &mut FrameBuffer<COLOR, WIDTH, HEIGHT>,
     ) {
         self.front_buffer_idx += 1;
         self.front_buffer_idx %= self.buffers.len();
 
         let front = self.front_buffer();
-        let back: &mut FrameBuffer<PIX, WIDTH, HEIGHT> =
+        let back: &mut FrameBuffer<COLOR, WIDTH, HEIGHT> =
             unsafe { core::mem::transmute(self.back_buffer()) };
         // after swap, copy the new front to the new back
         back.copy_from_slice(&**front);
 
         (front, back)
+    }
+
+    pub fn scroll(&mut self, px: i32, fill: COLOR) {
+        match px {
+            0 => { /* nop */ }
+            i32::MIN..=-1 => {
+                for _ in 0..px.abs().min(HEIGHT as i32) {
+                    for row in (1..HEIGHT).rev() {
+                        let (start, end) = self.back_buffer_mut().split_at_mut(row * WIDTH);
+                        end[..WIDTH].copy_from_slice(&start[Self::row_range(row - 1)]);
+                    }
+                    self.back_buffer_mut()[Self::row_range(0)].fill(fill);
+                }
+            }
+            1..=i32::MAX => {
+                for _ in 0..px.min(HEIGHT as i32) {
+                    for row in 1..HEIGHT {
+                        let (start, end) = self.back_buffer_mut().split_at_mut(row * WIDTH);
+                        start[Self::row_range(row - 1)].copy_from_slice(&end[..WIDTH]);
+                    }
+                    self.back_buffer_mut()[Self::row_range(HEIGHT - 1)].fill(fill);
+                }
+            }
+        }
     }
 
     #[inline(always)]
@@ -67,9 +96,11 @@ where
         HEIGHT
     }
 
-    pub fn info(&self) {
-        println!("mem::align_of<Self>: {}", std::mem::align_of::<Self>());
-        println!("mem::size_of<Self>: {}", std::mem::size_of::<Self>());
+    #[inline(always)]
+    const fn row_range(row: usize) -> Range<usize> {
+        assert!(row < HEIGHT);
+        let start = row * WIDTH;
+        start..(start + WIDTH)
     }
 
     #[inline]
@@ -95,12 +126,12 @@ where
     }
 }
 
-impl<PIX: PixelColor, const WIDTH: usize, const HEIGHT: usize> DrawTarget
-    for H7Display<PIX, WIDTH, HEIGHT>
+impl<'b, COLOR: PixelColor, const WIDTH: usize, const HEIGHT: usize> DrawTarget
+    for H7Display<'b, COLOR, WIDTH, HEIGHT>
 where
     [(); WIDTH * HEIGHT]:,
 {
-    type Color = PIX;
+    type Color = COLOR;
     type Error = std::convert::Infallible;
 
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
@@ -149,7 +180,7 @@ where
         let back_buffer = self.back_buffer_mut();
 
         for y in y_start..y_end {
-            let idx_start = FrameBuffer::<PIX, WIDTH, HEIGHT>::xy_to_index(x_start, y);
+            let idx_start = FrameBuffer::<COLOR, WIDTH, HEIGHT>::xy_to_index(x_start, y);
             back_buffer[idx_start..(idx_start + x_len)].fill(color);
         }
 
@@ -161,8 +192,8 @@ where
     }
 }
 
-impl<PIX: PixelColor, const WIDTH: usize, const HEIGHT: usize> OriginDimensions
-    for H7Display<PIX, WIDTH, HEIGHT>
+impl<'b, COLOR: PixelColor, const WIDTH: usize, const HEIGHT: usize> OriginDimensions
+    for H7Display<'b, COLOR, WIDTH, HEIGHT>
 where
     [(); WIDTH * HEIGHT]:,
 {
