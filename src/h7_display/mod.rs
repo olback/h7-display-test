@@ -69,18 +69,37 @@ where
                 for _ in 0..px.abs().min(HEIGHT as i32) {
                     for row in (1..HEIGHT).rev() {
                         let (start, end) = self.back_buffer_mut().split_at_mut(row * WIDTH);
-                        end[..WIDTH].copy_from_slice(&start[Self::row_range(row - 1)]);
+                        // end[..WIDTH].copy_from_slice(&start[Self::row_range(row - 1)]);
+                        unsafe {
+                            end.get_unchecked_mut(..WIDTH)
+                                .copy_from_slice(start.get_unchecked(Self::row_range(row - 1)))
+                        };
                     }
-                    self.back_buffer_mut()[Self::row_range(0)].fill(fill);
+                    // self.back_buffer_mut()[Self::row_range(0)].fill(fill);
+                    unsafe {
+                        self.back_buffer_mut()
+                            .get_unchecked_mut(Self::row_range(0))
+                            .fill(fill);
+                    }
                 }
             }
             1..=i32::MAX => {
                 for _ in 0..px.min(HEIGHT as i32) {
                     for row in 1..HEIGHT {
                         let (start, end) = self.back_buffer_mut().split_at_mut(row * WIDTH);
-                        start[Self::row_range(row - 1)].copy_from_slice(&end[..WIDTH]);
+                        // start[Self::row_range(row - 1)].copy_from_slice(&end[..WIDTH]);
+                        unsafe {
+                            start
+                                .get_unchecked_mut(Self::row_range(row - 1))
+                                .copy_from_slice(end.get_unchecked(..WIDTH));
+                        }
                     }
-                    self.back_buffer_mut()[Self::row_range(HEIGHT - 1)].fill(fill);
+                    // self.back_buffer_mut()[Self::row_range(HEIGHT - 1)].fill(fill);
+                    unsafe {
+                        self.back_buffer_mut()
+                            .get_unchecked_mut(Self::row_range(HEIGHT - 1))
+                            .fill(fill)
+                    };
                 }
             }
         }
@@ -98,7 +117,7 @@ where
 
     #[inline(always)]
     const fn row_range(row: usize) -> Range<usize> {
-        assert!(row < HEIGHT);
+        // assert!(row < HEIGHT);
         let start = row * WIDTH;
         start..(start + WIDTH)
     }
@@ -181,7 +200,12 @@ where
 
         for y in y_start..y_end {
             let idx_start = FrameBuffer::<COLOR, WIDTH, HEIGHT>::xy_to_index(x_start, y);
-            back_buffer[idx_start..(idx_start + x_len)].fill(color);
+            // back_buffer[idx_start..(idx_start + x_len)].fill(color);
+            unsafe {
+                back_buffer
+                    .get_unchecked_mut(idx_start..(idx_start + x_len))
+                    .fill(color);
+            };
         }
 
         Ok(())

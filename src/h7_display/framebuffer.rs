@@ -22,13 +22,15 @@ where
     #[inline(always)]
     pub fn at(&self, x: usize, y: usize) -> &COLOR {
         let idx = Self::xy_to_index(x, y);
-        &self[idx]
+        // &self[idx]
+        unsafe { self.get_unchecked(idx) }
     }
 
     #[inline(always)]
     pub fn at_mut(&mut self, x: usize, y: usize) -> &mut COLOR {
         let idx = Self::xy_to_index(x, y);
-        &mut self[idx]
+        // &mut self[idx]
+        unsafe { self.get_unchecked_mut(idx) }
     }
 
     #[inline(always)]
